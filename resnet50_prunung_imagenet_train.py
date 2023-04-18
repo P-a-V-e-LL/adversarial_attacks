@@ -7,8 +7,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+import torchvision.models as models
+import torchvision.datasets as datasets
+import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
-import torchattacks
 
 def get_arguments():
     ap = argparse.ArgumentParser()
@@ -39,6 +41,19 @@ def get_arguments():
     )
     return vars(ap.parse_args())
 
+class ResNet50_SA(nn.Module):
+    def __init__(self):
+        super(ResNet50_SA, self).__init__()
+        self.resnet50 = models.resnet50(pretrained=False)
+        self.dropout = nn.Dropout(p=0.2) # Прореживание
+        self.softmax = nn.Softmax(dim=1) # Softmax для получения вероятностного распределения классов
+
+    def forward(self, x):
+        x = self.resnet50(x)
+        x = self.dropout(x)
+        x = self.softmax(x)
+        return x
+
 def main():
     args = get_arguments()
 
@@ -56,7 +71,7 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = torchvision.models.resnet50(pretrained=False)
+    model = ResNet50_SA()
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, 1000) # change output layer to match Imagenet classes
 
@@ -87,11 +102,6 @@ def main():
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
 
-            # FGSM преобразование с шансом 50%
-            if random.randint(1, 100) > 50:
-                attack = torchattacks.FGSM(model, eps=0.05)
-                inputs = attack(inputs, labels)
-
             optimizer.zero_grad()
 
             outputs = model(inputs)
@@ -103,21 +113,16 @@ def main():
         train_loss.append(running_loss)
 
         val_running_loss = 0.0
-        #with torch.no_grad(): # fgsm needs grad
-        for i, data in enumerate(valloader, 0):
+        with torch.no_grad():
+            for i, data in enumerate(valloader, 0):
 
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+                inputs, labels = data
+                inputs, labels = inputs.to(device), labels.to(device)
 
-            # FGSM преобразование с шансом 50%
-            if random.randint(1, 100) > 50:
-                attack = torchattacks.FGSM(model, eps=0.05)
-                inputs = attack(inputs, labels)
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
 
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-
-            val_running_loss += loss.item()
+                val_running_loss += loss.item()
         val_loss.append(val_running_loss)
         print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss}')
 
@@ -134,15 +139,15 @@ def main():
     print(f"Training time: {time_str}")
 
     # Сохранение модели
-    torch.save(model.state_dict(), './models/resnet50_imagenet_FGSM_weights.pth')
+    torch.save(model.state_dict(), './models/resnet50_imagenet_pruning_weights.pth')
 
     plt.plot(train_loss, label="Training Loss")
     plt.plot(val_loss, label="Validation Loss")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title("resnet50_imagenet_FGSM")
+    plt.title("resnet50_imagenet_pruning")
     plt.legend()
-    plt.savefig('./loss_plots/classic_model_FGSM_plot.jpg')
+    plt.savefig('./loss_plots/classic_model_pruning_plot.jpg')
 
 if __name__ == '__main__':
     main()

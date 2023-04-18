@@ -84,6 +84,8 @@ def main():
 
     start = time.time()
 
+    model.train()
+
     # Train the model
     for epoch in range(args['epochs']):
         running_loss = 0.0
