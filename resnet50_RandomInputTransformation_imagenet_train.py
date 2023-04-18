@@ -7,8 +7,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+from torchvision.transforms import Compose, Resize, Pad
 import matplotlib.pyplot as plt
-import torchattacks
 
 def get_arguments():
     ap = argparse.ArgumentParser()
@@ -65,11 +65,18 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args['learning_rate'])
 
-    trainset = torchvision.datasets.ImageNet(root=args['data_path'], train=True, download=True, transform=torchvision.transforms.ToTensor())
+    transform = transforms.Compose([
+    Pad((random.randint(0, 35), random.randint(0, 35), random.randint(0, 35), random.randint(0, 35))),
+    Resize((224, 224)),
+    transforms.ToTensor(),
+    #transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    trainset = torchvision.datasets.ImageNet(root=args['data_path'], train=True, download=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args['batch_size'], shuffle=True)
 
     # Load the validation data
-    valset = torchvision.datasets.ImageNet(root=args['data_path'], train=False, download=True, transform=torchvision.transforms.ToTensor())
+    valset = torchvision.datasets.ImageNet(root=args['data_path'], train=False, download=True, transform=transform)
     valloader = torch.utils.data.DataLoader(valset, batch_size=args['batch_size'], shuffle=False, num_workers=2)
 
     train_loss = []
@@ -84,11 +91,6 @@ def main():
 
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
-
-            # FGSM преобразование с шансом 50%
-            if random.randint(1, 100) > 50:
-                attack = torchattacks.FGSM(model, eps=0.05)
-                inputs = attack(inputs, labels)
 
             optimizer.zero_grad()
 
@@ -106,11 +108,6 @@ def main():
 
                 inputs, labels = data
                 inputs, labels = inputs.to(device), labels.to(device)
-
-                # FGSM преобразование с шансом 50%
-                if random.randint(1, 100) > 50:
-                    attack = torchattacks.FGSM(model, eps=0.05)
-                    inputs = attack(inputs, labels)
 
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
@@ -132,15 +129,15 @@ def main():
     print(f"Training time: {time_str}")
 
     # Сохранение модели
-    torch.save(model.state_dict(), './models/resnet50_imagenet_FGSM_weights.pth')
+    torch.save(model.state_dict(), './models/resnet50_imagenet_RandomInput_weights.pth')
 
     plt.plot(train_loss, label="Training Loss")
     plt.plot(val_loss, label="Validation Loss")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title("resnet50_imagenet_FGSM")
+    plt.title("resnet50_imagenet_RandomInput")
     plt.legend()
-    plt.savefig('./loss_plots/classic_model_FGSM_plot.jpg')
+    plt.savefig('./loss_plots/classic_model_RandomInput_plot.jpg')
 
 if __name__ == '__main__':
     main()
