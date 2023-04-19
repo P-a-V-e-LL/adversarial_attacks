@@ -28,6 +28,8 @@ pip install -r requirements.txt
 - Random Input Transformation - resnet50_RandomInputTransformation_imagenet_train.py
 - Pruning - resnet50_pruning_imagenet_train.py
 
+Во всех скриптах используется оптимизатор Adam.
+
 Агрументы общие для всех скриптов:
 - --data_path - путь к набору данных, по умолчанию './data/'
 - --epochs - количество эпох обучения, по умочланию 250
