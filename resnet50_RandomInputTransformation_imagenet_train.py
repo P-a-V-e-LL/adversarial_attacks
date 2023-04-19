@@ -138,10 +138,12 @@ def main():
     torch.save(model.state_dict(), './models/resnet50_imagenet_RandomInput_weights.pth')
 
     plt.plot(train_loss, label="Training Loss")
-    plt.plot(val_loss, label="Validation Loss")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.title("resnet50_imagenet_RandomInput")
+    plt.legend()
+    plt.savefig('./loss_plots/classic_model_RandomInput_plot_train.jpg')
+    plt.plot(val_loss, label="Validation Loss")
     plt.legend()
     plt.savefig('./loss_plots/classic_model_RandomInput_plot.jpg')
 
