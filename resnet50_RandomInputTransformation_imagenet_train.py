@@ -9,6 +9,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torchvision.transforms import Compose, Resize, Pad
 import matplotlib.pyplot as plt
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 def get_arguments():
     ap = argparse.ArgumentParser()
@@ -65,6 +66,8 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args['learning_rate'])
 
+    scheduler = ReduceLROnPlateau(optimizer, patience=5)
+
     transform = transforms.Compose([
     Pad((random.randint(0, 35), random.randint(0, 35), random.randint(0, 35), random.randint(0, 35))),
     Resize((224, 224)),
@@ -116,12 +119,13 @@ def main():
 
                 val_running_loss += loss.item()
         val_loss.append(val_running_loss)
+        scheduler.step(val_running_loss)
         print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss}')
 
     print('Training completed successfully!')
     print(f'Train Loss: {train_loss[-1]}')
     print(f'Test Loss: {val_loss[-1]}')
-    print(f'Model params: epochs: {args["epochs"]}, batch_size: {args["batch_size"]}, learning_rate: {args["learning_rate"]}')
+    print(f'Model params: epochs: {args["epochs"]}, batch_size: {args["batch_size"]}, learning_rate: {args["learning_rate"]} -> {optimizer.param_groups[0]["lr"]}')
 
     end = time.time()
     elapsed_time = end - start
