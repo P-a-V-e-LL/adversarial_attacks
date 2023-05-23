@@ -10,6 +10,7 @@ import torchvision.transforms as transforms
 from torchvision.transforms import Compose, Resize, Pad
 import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from imagenet_class import ImageNetKaggle
 
 def get_arguments():
     ap = argparse.ArgumentParser()
@@ -75,11 +76,13 @@ def main():
     #transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    trainset = torchvision.datasets.ImageNet(root=args['data_path'], train=True, download=True, transform=transform)
+    #trainset = torchvision.datasets.ImageNet(root=args['data_path'], train=True, download=True, transform=transform)
+    trainset = ImageNetKaggle(root=args['data_path'], split="train", transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args['batch_size'], shuffle=True)
 
     # Load the validation data
-    valset = torchvision.datasets.ImageNet(root=args['data_path'], train=False, download=True, transform=transform)
+    #valset = torchvision.datasets.ImageNet(root=args['data_path'], train=False, download=True, transform=transform)
+    valset = ImageNetKaggle(root=args['data_path'], split="val", transform=transform)
     valloader = torch.utils.data.DataLoader(valset, batch_size=args['batch_size'], shuffle=False, num_workers=2)
 
     train_loss = []
