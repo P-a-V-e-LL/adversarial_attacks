@@ -44,9 +44,9 @@ def get_arguments():
 def main():
     args = get_arguments()
 
-    if not os.path.exists(args['data_path']):
-        os.makedirs(args['data_path'])
-        print("Folder ./data/ was created!")
+    #if not os.path.exists(args['data_path']):
+    #    os.makedirs(args['data_path'])
+    #    print("Folder ./data/ was created!")
 
     if not os.path.exists("./models/"):
         os.makedirs("./models/")
@@ -62,6 +62,11 @@ def main():
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, 1000) # change output layer to match Imagenet classes
 
+    # используем все карты
+    if torch.cuda.device_count() > 1:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
+        model = nn.DataParallel(model)
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()
