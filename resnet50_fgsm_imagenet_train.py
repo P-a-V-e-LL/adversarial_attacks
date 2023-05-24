@@ -44,9 +44,9 @@ def get_arguments():
 def main():
     args = get_arguments()
 
-    if not os.path.exists(args['data_path']):
-        os.makedirs(args['data_path'])
-        print("Folder ./data/ was created!")
+    #if not os.path.exists(args['data_path']):
+    #    os.makedirs(args['data_path'])
+    #    print("Folder ./data/ was created!")
 
     if not os.path.exists("./models/"):
         os.makedirs("./models/")
@@ -62,6 +62,11 @@ def main():
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, 1000) # change output layer to match Imagenet classes
 
+    # используем все карты
+    if torch.cuda.device_count() > 1:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()
@@ -69,14 +74,19 @@ def main():
 
     scheduler = ReduceLROnPlateau(optimizer, patience=5)
 
+    transform = transforms.Compose([
+    Resize((224, 224)),
+    transforms.ToTensor(),
+    ])
+
     #trainset = torchvision.datasets.ImageNet(root=args['data_path'], train=True, download=True, transform=torchvision.transforms.ToTensor())
-    trainset = ImageNetKaggle(root=args['data_path'], split="train", transform=torchvision.transforms.ToTensor())
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=args['batch_size'], shuffle=True)
+    trainset = ImageNetKaggle(root=args['data_path'], split="train", transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=args['batch_size'], shuffle=True, num_workers=20)
 
     # Load the validation data
     #valset = torchvision.datasets.ImageNet(root=args['data_path'], train=False, download=True, transform=torchvision.transforms.ToTensor())
-    valset = ImageNetKaggle(root=args['data_path'], split="val", transform=torchvision.transforms.ToTensor())
-    valloader = torch.utils.data.DataLoader(valset, batch_size=args['batch_size'], shuffle=False, num_workers=2)
+    valset = ImageNetKaggle(root=args['data_path'], split="val", transform=transform)
+    valloader = torch.utils.data.DataLoader(valset, batch_size=args['batch_size'], shuffle=False, num_workers=20)
 
     train_loss = []
     val_loss = []
