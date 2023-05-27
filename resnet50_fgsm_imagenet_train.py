@@ -77,6 +77,7 @@ def main():
     transform = transforms.Compose([
     Resize((224, 224)),
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
     #trainset = torchvision.datasets.ImageNet(root=args['data_path'], train=True, download=True, transform=torchvision.transforms.ToTensor())
