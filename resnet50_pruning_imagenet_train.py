@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+from torchvision.transforms import Compose, Resize
 import torchvision.models as models
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
