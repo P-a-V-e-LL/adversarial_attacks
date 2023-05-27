@@ -83,7 +83,7 @@ def main():
 
     #trainset = torchvision.datasets.ImageNet(root=args['data_path'], train=True, download=True, transform=transform)
     trainset = ImageNetKaggle(root=args['data_path'], split="train", transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=args['batch_size'], shuffle=True, num_workers=2)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=args['batch_size'], shuffle=True, num_workers=20)
 
     # Load the validation data
     #valset = torchvision.datasets.ImageNet(root=args['data_path'], train=False, download=True, transform=transform)
