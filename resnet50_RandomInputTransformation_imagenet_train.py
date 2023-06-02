@@ -92,6 +92,7 @@ def main():
 
     train_loss = []
     val_loss = []
+    best_val_loss = float('inf')
 
     start = time.time()
 
@@ -127,6 +128,9 @@ def main():
 
                 val_running_loss += loss.item()
         val_loss.append(val_running_loss)
+        if val_running_loss < best_val_loss:
+            best_val_loss = val_running_loss
+            torch.save(model.state_dict(), './models/resnet50_RIT_best_val.pth')
         scheduler.step(val_running_loss)
         print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss}')
 
