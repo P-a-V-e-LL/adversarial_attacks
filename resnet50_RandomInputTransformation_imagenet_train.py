@@ -75,7 +75,8 @@ def main():
     scheduler = ReduceLROnPlateau(optimizer, patience=5)
 
     transform = transforms.Compose([
-    Pad((random.randint(0, 35), random.randint(0, 35), random.randint(0, 35), random.randint(0, 35))),
+    Resize((224, 224)),
+    Pad((random.randint(0, 25), random.randint(0, 25), random.randint(0, 25), random.randint(0, 25))),
     Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
