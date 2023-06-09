@@ -1,5 +1,6 @@
 import torch
 import os
+import random
 import argparse
 import torchvision.models as models
 import torch.nn as nn
@@ -28,44 +29,42 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = models.resnet50(pretrained=False)
+    model = models.resnet50(pretrained=False) #True
     model.load_state_dict(torch.load(args['model_path']), strict=False)
 
     # используем все карты
-    if torch.cuda.device_count() > 1:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model)
+    #if torch.cuda.device_count() > 1:
+    #    print("Let's use", torch.cuda.device_count(), "GPUs!")
+    #    model = nn.DataParallel(model)
 
     model.to(device)
 
     transform = transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        # transforms.Resize(224),
+        transforms.Pad((random.randint(0, 35), random.randint(0, 35), random.randint(0, 35), random.randint(0, 35))),
+        transforms.Resize(224),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
 
     valset = ImageNetKaggle(root=args['data_path'], split="val", transform=transform)
     valloader = torch.utils.data.DataLoader(valset, batch_size=64, shuffle=False, num_workers=20)
 
-    # Расчет основных метрик качества на тестовом наборе данных Imagenet
-    #correct = 0
-    #total = 0
-    metric = torchmetrics.Accuracy(task="multiclass", num_classes=1000).to(device)
+    metric = torchmetrics.classification.Accuracy(task="multiclass", num_classes=1000).to(device)
+
     with torch.no_grad():
         for data in valloader:
             images, labels = data
             images, labels = images.to(device), labels.to(device)
 
             outputs = model(images)
-            outputs=outputs.to(device)
+            #outputs=outputs.to(device)
             acc = metric(outputs, labels)
-            #print(acc)
-            #_, predicted = torch.max(outputs.data, 1)
-            #total += labels.size(0)
-            #correct += (predicted == labels).sum().item()
+            print(f"Accuracy on batch: {acc}")
 
-    #accuracy = correct / total * 100
-    accuracy = metric.compute()
-    print('Accuracy of the network on the test images: %d %%' % accuracy)
+    acc = metric.compute()
+    print(f"Accuracy on all data: {acc}")
 
 if __name__ == '__main__':
     main()
