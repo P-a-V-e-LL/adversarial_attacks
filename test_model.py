@@ -25,6 +25,23 @@ def get_arguments():
     )
     return vars(ap.parse_args())
 
+def fgsm_attack(model, loss, images, labels, eps) :
+
+    images = images.to(device)
+    labels = labels.to(device)
+    images.requires_grad = True
+
+    outputs = model(images)
+
+    model.zero_grad()
+    cost = loss(outputs, labels).to(device)
+    cost.backward()
+
+    attack_images = images + eps*images.grad.sign()
+    attack_images = torch.clamp(attack_images, 0, 1)
+
+    return attack_images
+
 def main():
     args = get_arguments()
 
@@ -42,13 +59,15 @@ def main():
     #    model = nn.DataParallel(model)
 
     model.to(device)
+    model.eval()
+
+    loss = nn.CrossEntropyLoss()
 
     transform = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
-        # transforms.Resize(224),
-        transforms.Pad((random.randint(0, 35), random.randint(0, 35), random.randint(0, 35), random.randint(0, 35))),
-        transforms.Resize(224),
+        #transforms.Pad((random.randint(0, 35), random.randint(0, 35), random.randint(0, 35), random.randint(0, 35))),
+        #transforms.Resize(224),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
 
@@ -65,10 +84,26 @@ def main():
             outputs = model(images)
             #outputs=outputs.to(device)
             acc = metric(outputs, labels)
-            print(f"Accuracy on batch: {acc}")
+            #print(f"Accuracy on batch: {acc}")
 
     acc = metric.compute()
-    print(f"Accuracy on all data: {acc}")
+    print(f"Base Accuracy: {acc}")
+
+    correct = 0
+    total = 0
+    eps = 0.007
+
+    with torch.no_grad():
+        for images, labels in valloader:
+            images = fgsm_acttack(model, loss, images, labels, eps).to(device)
+            labels = labels.to(device)
+            outputs = model(images)
+            _, pre = torch.max(outputs.data, 1)
+
+            total += 1
+            correct += (pre == labels).sum()
+
+    print('FGSM Accuracy: %f %%' % (100 * float(correct) / total))
 
 if __name__ == '__main__':
     main()
