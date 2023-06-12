@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 Для каждого метода защиты реализован скрипт обучения:
 - Fast gradient sign method - resnet50_fgsm_imagenet_train.py
-- Random Input Transformation - resnet50_RandomInputTransformation_imagenet_train.py
+- Random Input Transformation - resnet50_RIT_imagenet_train.py
 - Pruning - resnet50_pruning_imagenet_train.py
 
 Во всех скриптах используется оптимизатор Adam.
@@ -35,5 +35,7 @@ pip install -r requirements.txt
 - --epochs - количество эпох обучения, по умочланию 250
 - --batch_size - размер батча, по умолчанию 64
 - --learning_rate - шаг обучения, по умолчанию 1e-3
+- --model_save_name - название файла для сохранения модели, по умолчанию соответствует имени файла
+- --model_path - путь для предобученной pth модели, при отсутствии загружаются стандартные веса resnet50
 
 После обучения результат будет сохранен в формате pth в папке models, также в папке loss_plots будут сохранены два графика падения ошибки: только train и train&test вместе.
