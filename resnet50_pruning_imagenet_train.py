@@ -158,7 +158,7 @@ def main():
         val_loss.append(val_running_loss)
         if val_running_loss < best_val_loss:
             best_val_loss = val_running_loss
-            torch.save(model.state_dict(), './models/'+args['model_save_name']+'best_val.pth')
+            torch.save(model.state_dict(), './models/'+args['model_save_name']+'_'+str(epoch)+'_'+'best_val.pth')
         scheduler.step(val_running_loss)
         print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss} - lr {optimizer.param_groups[0]["lr"]}')
 
