@@ -44,6 +44,12 @@ def get_arguments():
         default='resnet50_imagenet_RIT_weights',
         help="Model name to save"
     )
+    ap.add_argument(
+        "--model_path",
+        default=False,
+        #required=True,
+        help="Path to model pth"
+    )
     return vars(ap.parse_args())
 
 def main():
@@ -63,15 +69,20 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = torchvision.models.resnet50(pretrained=False)
-    num_ftrs = model.fc.in_features
-    model.fc = nn.Linear(num_ftrs, 1000) # change output layer to match Imagenet classes
+    if args['model_path']:
+        model = torchvision.models.resnet50(pretrained=False) #True
+        model.load_state_dict(torch.load(args['model_path']), strict=False)
+    else:
+        model = torchvision.models.resnet50(pretrained=True)
+    #model = torchvision.models.resnet50(pretrained=False)
+    #num_ftrs = model.fc.in_features
+    #model.fc = nn.Linear(num_ftrs, 1000) # change output layer to match Imagenet classes
 
     # используем все карты
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
-        
+
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()
@@ -87,12 +98,9 @@ def main():
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    #trainset = torchvision.datasets.ImageNet(root=args['data_path'], train=True, download=True, transform=transform)
     trainset = ImageNetKaggle(root=args['data_path'], split="train", transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args['batch_size'], shuffle=True, num_workers=20)
 
-    # Load the validation data
-    #valset = torchvision.datasets.ImageNet(root=args['data_path'], train=False, download=True, transform=transform)
     valset = ImageNetKaggle(root=args['data_path'], split="val", transform=transform)
     valloader = torch.utils.data.DataLoader(valset, batch_size=args['batch_size'], shuffle=False, num_workers=20)
 
@@ -136,9 +144,9 @@ def main():
         val_loss.append(val_running_loss)
         if val_running_loss < best_val_loss:
             best_val_loss = val_running_loss
-            torch.save(model.state_dict(), './models/resnet50_RIT_best_val.pth')
+            torch.save(model.state_dict(), './models/'+args['model_save_name']+'best_val.pth')
         scheduler.step(val_running_loss)
-        print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss}')
+        print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss} - lr {optimizer.param_groups[0]["lr"]}')
 
     print('Training completed successfully!')
     print(f'Train Loss: {train_loss[-1]}')
@@ -153,17 +161,17 @@ def main():
     print(f"Training time: {time_str}")
 
     # Сохранение модели
-    torch.save(model.state_dict(), './models/resnet50_imagenet_RandomInput_weights.pth')
+    torch.save(model.state_dict(), './models/'+args['model_save_name']+'_full.pth')
 
     plt.plot(train_loss, label="Training Loss")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.title("resnet50_imagenet_RandomInput")
     plt.legend()
-    plt.savefig('./loss_plots/classic_model_RandomInput_plot_train.jpg')
+    plt.savefig('./loss_plots/'+args['model_save_name']+'_plot_train.jpg')
     plt.plot(val_loss, label="Validation Loss")
     plt.legend()
-    plt.savefig('./loss_plots/classic_model_RandomInput_plot.jpg')
+    plt.savefig('./loss_plots/'+args['model_save_name']+'_plot.jpg')
 
 if __name__ == '__main__':
     main()

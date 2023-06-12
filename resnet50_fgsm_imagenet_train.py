@@ -40,6 +40,17 @@ def get_arguments():
         default=1e-3,
         help="Learning rate"
     )
+    ap.add_argument(
+        "--model_save_name",
+        default='resnet50_imagenet_FGSM_weights',
+        help="Model name to save"
+    )
+    ap.add_argument(
+        "--model_path",
+        default=False,
+        #required=True,
+        help="Path to model pth"
+    )
     return vars(ap.parse_args())
 
 def main():
@@ -59,9 +70,14 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = torchvision.models.resnet50(pretrained=False)
-    num_ftrs = model.fc.in_features
-    model.fc = nn.Linear(num_ftrs, 1000) # change output layer to match Imagenet classes
+    if args['model_path']:
+        model = torchvision.models.resnet50(pretrained=False) #True
+        model.load_state_dict(torch.load(args['model_path']), strict=False)
+    else:
+        model = torchvision.models.resnet50(pretrained=True)
+    #model = torchvision.models.resnet50(pretrained=False)
+    #num_ftrs = model.fc.in_features
+    #model.fc = nn.Linear(num_ftrs, 1000) # change output layer to match Imagenet classes
 
     # используем все карты
     if torch.cuda.device_count() > 1:
@@ -92,7 +108,8 @@ def main():
 
     train_loss = []
     val_loss = []
-    val_running_loss = float('inf')
+    best_val_loss = float('inf')
+    #val_running_loss = float('inf')
 
     start = time.time()
 
@@ -140,9 +157,9 @@ def main():
         val_loss.append(val_running_loss)
         if val_running_loss < best_val_loss:
             best_val_loss = val_running_loss
-            torch.save(model.state_dict(), './models/resnet50_fgsm_best_val.pth')
+            torch.save(model.state_dict(), './models/'+args['model_save_name']+'best_val.pth')
         scheduler.step(val_running_loss)
-        print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss}')
+        print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss} - lr {optimizer.param_groups[0]["lr"]}')
 
     print('Training completed successfully!')
     print(f'Train Loss: {train_loss[-1]}')
@@ -157,17 +174,17 @@ def main():
     print(f"Training time: {time_str}")
 
     # Сохранение модели
-    torch.save(model.state_dict(), './models/resnet50_imagenet_FGSM_weights.pth')
+    torch.save(model.state_dict(), './models/'+args['model_save_name']+'_full.pth')
 
     plt.plot(train_loss, label="Training Loss")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title("resnet50_imagenet_FGSM")
+    plt.title("resnet50_imagenet_fgsm")
     plt.legend()
-    plt.savefig('./loss_plots/classic_model_FGSM_plot_train.jpg')
+    plt.savefig('./loss_plots/'+args['model_save_name']+'_plot_train.jpg')
     plt.plot(val_loss, label="Validation Loss")
     plt.legend()
-    plt.savefig('./loss_plots/classic_model_FGSM_plot.jpg')
+    plt.savefig('./loss_plots/'+args['model_save_name']+'_plot.jpg')
 
 if __name__ == '__main__':
     main()

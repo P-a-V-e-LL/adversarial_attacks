@@ -19,7 +19,8 @@ def get_arguments():
     )
     ap.add_argument(
         "--model_path",
-        required=True,
+        default=False,
+        #required=True,
         help="Path to model pth"
     )
     return vars(ap.parse_args())
@@ -29,8 +30,11 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = models.resnet50(pretrained=False) #True
-    model.load_state_dict(torch.load(args['model_path']), strict=False)
+    if args['model_path']:
+        model = models.resnet50(pretrained=False) #True
+        model.load_state_dict(torch.load(args['model_path']), strict=False)
+    else:
+        model = models.resnet50(pretrained=True)
 
     # используем все карты
     #if torch.cuda.device_count() > 1:

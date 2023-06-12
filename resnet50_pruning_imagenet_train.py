@@ -42,12 +42,23 @@ def get_arguments():
         default=1e-3,
         help="Learning rate"
     )
+    ap.add_argument(
+        "--model_save_name",
+        default='resnet50_imagenet_pruning_weights',
+        help="Model name to save"
+    )
+    ap.add_argument(
+        "--model_path",
+        default=False,
+        #required=True,
+        help="Path to model pth"
+    )
     return vars(ap.parse_args())
 
 class ResNet50_SA(nn.Module):
-    def __init__(self):
+    def __init__(self, weights=False):
         super(ResNet50_SA, self).__init__()
-        self.resnet50 = models.resnet50(pretrained=False)
+        self.resnet50 = models.resnet50(pretrained=weights)
         self.dropout = nn.Dropout(p=0.2) # Прореживание
         self.softmax = nn.Softmax(dim=1) # Softmax для получения вероятностного распределения классов
 
@@ -75,8 +86,13 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model = ResNet50_SA()
-    num_ftrs = model.fc.in_features
-    model.fc = nn.Linear(num_ftrs, 1000) # change output layer to match Imagenet classes
+    if args['model_path']:
+        model = ResNet50_SA()
+        model.load_state_dict(torch.load(args['model_path']), strict=False)
+    else:
+        model = ResNet50_SA(weights=True)
+    #num_ftrs = model.fc.in_features
+    #model.fc = nn.Linear(num_ftrs, 1000) # change output layer to match Imagenet classes
 
     # используем все карты
     if torch.cuda.device_count() > 1:
@@ -96,18 +112,15 @@ def main():
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    #trainset = torchvision.datasets.ImageNet(root=args['data_path'], train=True, download=True, transform=torchvision.transforms.ToTensor())
     trainset = ImageNetKaggle(root=args['data_path'], split="train", transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=args['batch_size'], shuffle=True, num_workers=20)
 
-    # Load the validation data
-    #valset = torchvision.datasets.ImageNet(root=args['data_path'], train=False, download=True, transform=torchvision.transforms.ToTensor())
     valset = ImageNetKaggle(root=args['data_path'], split="val", transform=transform)
     valloader = torch.utils.data.DataLoader(valset, batch_size=args['batch_size'], shuffle=False, num_workers=20)
 
     train_loss = []
     val_loss = []
-    val_running_loss = float('inf')
+    best_val_loss = float('inf')
 
     start = time.time()
 
@@ -145,9 +158,9 @@ def main():
         val_loss.append(val_running_loss)
         if val_running_loss < best_val_loss:
             best_val_loss = val_running_loss
-            torch.save(model.state_dict(), './models/resnet50_pruning_best_val.pth')
+            torch.save(model.state_dict(), './models/'+args['model_save_name']+'best_val.pth')
         scheduler.step(val_running_loss)
-        print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss}')
+        print(f'Epoch {epoch+1} - train loss {running_loss} - val loss {val_running_loss} - lr {optimizer.param_groups[0]["lr"]}')
 
     print('Training completed successfully!')
     print(f'Train Loss: {train_loss[-1]}')
@@ -162,17 +175,17 @@ def main():
     print(f"Training time: {time_str}")
 
     # Сохранение модели
-    torch.save(model.state_dict(), './models/resnet50_imagenet_pruning_weights.pth')
+    torch.save(model.state_dict(), './models/'+args['model_save_name']+'_full.pth')
 
     plt.plot(train_loss, label="Training Loss")
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title("resnet50_imagenet_pruning")
+    plt.title("resnet50_imagenet_Pruning")
     plt.legend()
-    plt.savefig('./loss_plots/classic_model_pruning_plot_train.jpg')
+    plt.savefig('./loss_plots/'+args['model_save_name']+'_plot_train.jpg')
     plt.plot(val_loss, label="Validation Loss")
     plt.legend()
-    plt.savefig('./loss_plots/classic_model_pruning_plot.jpg')
+    plt.savefig('./loss_plots/'+args['model_save_name']+'_plot.jpg')
 
 if __name__ == '__main__':
     main()
