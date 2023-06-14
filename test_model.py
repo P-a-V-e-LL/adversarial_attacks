@@ -95,7 +95,7 @@ def main():
 
     with torch.no_grad():
         for images, labels in valloader:
-            images = fgsm_acttack(model, loss, images, labels, eps).to(device)
+            images = fgsm_attack(model, loss, images, labels, eps).to(device)
             labels = labels.to(device)
             outputs = model(images)
             _, pre = torch.max(outputs.data, 1)
