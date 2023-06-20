@@ -53,6 +53,21 @@ def get_arguments():
     )
     return vars(ap.parse_args())
 
+def fgsm_attack(image, epsilon, data_grad):
+    sign_data_grad = data_grad.sign()
+    perturbed_image = image + epsilon*sign_data_grad
+    perturbed_image = torch.clamp(perturbed_image, 0, 1)
+    return perturbed_image
+
+def denorm(batch, device, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
+    if isinstance(mean, list):
+        mean = torch.tensor(mean).to(device)
+    if isinstance(std, list):
+        std = torch.tensor(std).to(device)
+
+    return batch * std.view(1, -1, 1, 1) + mean.view(1, -1, 1, 1)
+
+
 def main():
     args = get_arguments()
 
@@ -109,6 +124,7 @@ def main():
     train_loss = []
     val_loss = []
     best_val_loss = float('inf')
+    epsilon = 0.007
     #val_running_loss = float('inf')
 
     start = time.time()
@@ -123,14 +139,30 @@ def main():
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
 
+            data.requires_grad = True
+            optimizer.zero_grad()
             # FGSM преобразование с шансом 50%
             if random.randint(1, 100) > 50:
-                attack = torchattacks.FGSM(model, eps=0.05)
-                inputs = attack(inputs, labels)
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                model.zero_grad()
 
-            optimizer.zero_grad()
+                loss.backward()
+                data_grad = data.grad.data
+                data_denorm = denorm(data, device)
 
-            outputs = model(inputs)
+                perturbed_data = fgsm_attack(data_denorm, epsilon, data_grad)
+
+                perturbed_data_normalized = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(
+                    perturbed_data)
+
+                outputs = model(perturbed_data_normalized)
+            else:
+                outputs = model(inputs)
+
+            #optimizer.zero_grad()
+
+            #outputs = model(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -144,13 +176,28 @@ def main():
 
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
+            data.requires_grad = True
 
             # FGSM преобразование с шансом 50%
             if random.randint(1, 100) > 50:
-                attack = torchattacks.FGSM(model, eps=0.05)
-                inputs = attack(inputs, labels)
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                model.zero_grad()
 
-            outputs = model(inputs)
+                loss.backward()
+                data_grad = data.grad.data
+                data_denorm = denorm(data, device)
+
+                perturbed_data = fgsm_attack(data_denorm, epsilon, data_grad)
+
+                perturbed_data_normalized = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(
+                    perturbed_data)
+
+                outputs = model(perturbed_data_normalized)
+            else:
+                outputs = model(inputs)
+
+            #outputs = model(inputs)
             loss = criterion(outputs, labels)
 
             val_running_loss += loss.item()
