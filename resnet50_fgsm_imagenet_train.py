@@ -134,17 +134,16 @@ def main():
     # Train the model
     for epoch in range(args['epochs']):
         running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
+        for data, target in trainloader:
 
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+            data, target = data.to(device), target.to(device)
 
             data.requires_grad = True
             optimizer.zero_grad()
             # FGSM преобразование с шансом 50%
             if random.randint(1, 100) > 50:
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
+                outputs = model(data)
+                loss = criterion(outputs, target)
                 model.zero_grad()
 
                 loss.backward()
@@ -158,12 +157,12 @@ def main():
 
                 outputs = model(perturbed_data_normalized)
             else:
-                outputs = model(inputs)
+                outputs = model(data)
 
             #optimizer.zero_grad()
 
-            #outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            #outputs = model(data)
+            loss = criterion(outputs, target)
             loss.backward()
             optimizer.step()
 
@@ -172,16 +171,15 @@ def main():
 
         val_running_loss = 0.0
         #with torch.no_grad(): # fgsm needs grad
-        for i, data in enumerate(valloader, 0):
+        for data, target in valloader:
 
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
+            data, target = data.to(device), target.to(device)
             data.requires_grad = True
 
             # FGSM преобразование с шансом 50%
             if random.randint(1, 100) > 50:
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
+                outputs = model(data)
+                loss = criterion(outputs, target)
                 model.zero_grad()
 
                 loss.backward()
@@ -195,10 +193,10 @@ def main():
 
                 outputs = model(perturbed_data_normalized)
             else:
-                outputs = model(inputs)
+                outputs = model(data)
 
-            #outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            #outputs = model(data)
+            loss = criterion(outputs, target)
 
             val_running_loss += loss.item()
         val_loss.append(val_running_loss)
